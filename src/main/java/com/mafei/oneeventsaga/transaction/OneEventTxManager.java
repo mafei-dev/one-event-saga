@@ -3,9 +3,9 @@ package com.mafei.oneeventsaga.transaction;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mafei.oneeventsaga.annotations.Secondary;
+import com.mafei.oneeventsaga.context.OneEventContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -47,7 +47,15 @@ public class OneEventTxManager implements PlatformTransactionManager {
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-        return new OneEventSimpleTransactionStatus(transactionDefinition.getName());
+        try {
+            Class<?> serviceClass = Class.forName(Objects.requireNonNull(transactionDefinition.getName()).replaceFirst("\\.process", ""));
+            Secondary declaredAnnotation = serviceClass.getDeclaredAnnotation(Secondary.class);
+            OneEventContext.setCurrentStep(declaredAnnotation);
+            return new OneEventSimpleTransactionStatus(transactionDefinition.getName(), declaredAnnotation);
+        } catch (ClassNotFoundException e) {
+            return null;
+        }
+
     }
 
     @Override
@@ -68,7 +76,11 @@ public class OneEventTxManager implements PlatformTransactionManager {
                 Constructor<?> ctor = serviceClass.getConstructor();
                 Object object = ctor.newInstance();
                 revert.get().invoke(object, contextObjectSaveData);
+                // TODO: 8/12/2021 remove after checking
+                Thread.sleep(10_000);
             } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException | InstantiationException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         } catch (ClassNotFoundException e) {
@@ -79,12 +91,18 @@ public class OneEventTxManager implements PlatformTransactionManager {
 
 class OneEventSimpleTransactionStatus extends SimpleTransactionStatus {
     private final String className;
+    private final Secondary secondary;
 
-    OneEventSimpleTransactionStatus(String className) {
+    OneEventSimpleTransactionStatus(String className, Secondary secondary) {
         this.className = className;
+        this.secondary = secondary;
     }
 
     public String getClassName() {
         return className;
+    }
+
+    public Secondary getSecondary() {
+        return secondary;
     }
 }
