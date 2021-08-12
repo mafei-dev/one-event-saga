@@ -1,0 +1,22 @@
+{
+  "properties": [
+    {
+      "name": "spring.oneevent.port",
+      "type": "java.lang.Integer",
+      "description": "Description for spring.one-event.port.",
+      "sourceType": "com.mafei.oneeventsaga.config.OneEventProperties"
+    },
+    {
+      "name": "spring.oneevent.component-scan",
+      "type": "java.lang.String",
+      "description": "Description for spring.one-event.componentScan",
+      "sourceType": "com.mafei.oneeventsaga.config.OneEventProperties"
+    },
+    {
+      "name": "spring.oneevent.path",
+      "type": "java.lang.String",
+      "description": "Description for spring.one-event.componentScan",
+      "sourceType": "com.mafei.oneeventsaga.config.OneEventProperties"
+    }
+  ]
+}
