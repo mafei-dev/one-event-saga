@@ -58,6 +58,7 @@ public class OneEventTxManager implements PlatformTransactionManager {
 
     }
 
+
     @Override
     public void commit(TransactionStatus transactionStatus) throws TransactionException {
         System.out.println("OneEventTxManager.commit");
