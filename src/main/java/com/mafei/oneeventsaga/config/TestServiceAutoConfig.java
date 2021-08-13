@@ -39,6 +39,7 @@ public class TestServiceAutoConfig {
 
     @PostConstruct
     public void doValidateAndGenerate() {
+        System.out.println("oneEventProperties.getComponentScan() = " + Arrays.toString(oneEventProperties.getComponentScan()));
         ValidateResponse validate = validate();
         if (!validate.pageList.isEmpty()) {
             createFile();

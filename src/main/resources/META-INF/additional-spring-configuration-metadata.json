@@ -1,14 +1,8 @@
 {
   "properties": [
     {
-      "name": "spring.oneevent.port",
-      "type": "java.lang.Integer",
-      "description": "Description for spring.one-event.port.",
-      "sourceType": "com.mafei.oneeventsaga.config.OneEventProperties"
-    },
-    {
       "name": "spring.oneevent.component-scan",
-      "type": "java.lang.String",
+      "type": "java.lang.String[]",
       "description": "Description for spring.one-event.componentScan",
       "sourceType": "com.mafei.oneeventsaga.config.OneEventProperties"
     },
@@ -16,6 +10,24 @@
       "name": "spring.oneevent.path",
       "type": "java.lang.String",
       "description": "Description for spring.one-event.componentScan",
+      "sourceType": "com.mafei.oneeventsaga.config.OneEventProperties"
+    },
+    {
+      "name": "spring.oneevent.show-start-up-summary",
+      "type": "java.lang.Boolean",
+      "description": "showStartUpSummary",
+      "sourceType": "com.mafei.oneeventsaga.config.OneEventProperties"
+    },
+    {
+      "name": "spring.oneevent.show-start-up-configured-steps",
+      "type": "java.lang.Boolean",
+      "description": "showStartUpConfiguredSteps",
+      "sourceType": "com.mafei.oneeventsaga.config.OneEventProperties"
+    },
+    {
+      "name": "spring.oneevent.show-transaction-summary",
+      "type": "java.lang.Boolean",
+      "description": "showTransactionSummary",
       "sourceType": "com.mafei.oneeventsaga.config.OneEventProperties"
     }
   ]

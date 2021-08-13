@@ -1,11 +1,10 @@
 package com.mafei.oneeventsaga.core;
 
+import com.mafei.oneeventsaga.annotations.OneEventListener;
 import com.mafei.oneeventsaga.annotations.Primary1;
 import com.mafei.oneeventsaga.annotations.Secondary;
 import com.mafei.oneeventsaga.annotations.Start;
-import com.mafei.oneeventsaga.process.ProcessStatus;
-import com.mafei.oneeventsaga.process.ServiceData;
-import com.mafei.oneeventsaga.process.ServiceTypes;
+import com.mafei.oneeventsaga.process.*;
 import de.vandermeer.asciitable.AsciiTable;
 import de.vandermeer.asciitable.CWC_LongestWord;
 import de.vandermeer.asciithemes.u8.U8_Grids;
@@ -58,6 +57,13 @@ public class OneEventTemplateImpl<Aggregate> {
             };
         }*/
     public static final String ANSI_GREEN = "\u001B[32m";
+    public static final String ANSI_RESET = "\u001B[0m";
+    public static final String ANSI_BLACK = "\u001B[30m";
+    public static final String ANSI_YELLOW = "\u001B[33m";
+    public static final String ANSI_BLUE = "\u001B[34m";
+    public static final String ANSI_PURPLE = "\u001B[35m";
+    public static final String ANSI_CYAN = "\u001B[36m";
+    public static final String ANSI_WHITE = "\u001B[37m";
     Logger logger = LoggerFactory.getLogger(OneEventTemplateImpl.class);
     @Autowired
     ListableBeanFactory beanFactory;
@@ -68,34 +74,89 @@ public class OneEventTemplateImpl<Aggregate> {
             @Override
             public void process(Class<?> aClass, Aggregate aggregate, Object... args) {
 
+
                 Map<String, ?> beansOfType = beanFactory.getBeansOfType(aClass);
                 TreeMap<Double, ServiceData> serviceMap = new TreeMap<>();
                 TreeMap<Double, ServiceData> prcessingServiceMap = serviceMap;
+                TreeMap<Integer, ServiceListenerData> serviceListeners = new TreeMap<>();
+
 
                 try {
+                    for (Map.Entry<String, ?> entry : beansOfType.entrySet()) {
 
-                    beansOfType.forEach((s, o) -> {
-                        if (o.getClass().isAnnotationPresent(Start.class)) {
+                        if (entry.getValue().getClass().isAnnotationPresent(Start.class)) {
                             ServiceData startServiceData = new ServiceData();
-                            startServiceData.setBeanName(s);
+                            startServiceData.setBeanName(entry.getKey());
                             startServiceData.setServiceType(ServiceTypes.START_SERVICE);
-                            startServiceData.setServiceClass(o.getClass());
-                            startServiceData.setStart(o.getClass().getDeclaredAnnotation(Start.class));
-                            startServiceData.setFullObject(o);
-                            serviceMap.put(1.0, startServiceData);
-                        } else if (o.getClass().isAnnotationPresent(Secondary.class)) {
+                            startServiceData.setServiceClass(entry.getValue().getClass());
+                            startServiceData.setStart(entry.getValue().getClass().getDeclaredAnnotation(Start.class));
+                            startServiceData.setFullObject(entry.getValue());
+                            // TODO: 8/13/2021 check and throw the exception if duplicated
+                            serviceMap.putIfAbsent(1.0, startServiceData);
+                        } else if (entry.getValue().getClass().isAnnotationPresent(Secondary.class)) {
                             ServiceData secondaryServiceData = new ServiceData();
-                            secondaryServiceData.setBeanName(s);
+                            secondaryServiceData.setBeanName(entry.getKey());
                             secondaryServiceData.setServiceType(ServiceTypes.SECONDER_SERVICE);
-                            secondaryServiceData.setServiceClass(o.getClass());
-                            secondaryServiceData.setSecondary(o.getClass().getDeclaredAnnotation(Secondary.class));
-                            secondaryServiceData.setFullObject(o);
-                            serviceMap.put(secondaryServiceData.getSecondary().step(), secondaryServiceData);
-                        }
+                            secondaryServiceData.setServiceClass(entry.getValue().getClass());
+                            secondaryServiceData.setSecondary(entry.getValue().getClass().getDeclaredAnnotation(Secondary.class));
+                            secondaryServiceData.setFullObject(entry.getValue());
+                            // TODO: 8/13/2021 check and throw the exception if duplicated
+                            serviceMap.putIfAbsent(secondaryServiceData.getSecondary().step(), secondaryServiceData);
+                        } else if (entry.getValue().getClass().isAnnotationPresent(OneEventListener.class)) {
+                            OneEventListener declaredAnnotation = entry.getValue().getClass().getDeclaredAnnotation(OneEventListener.class);
+                            ServiceListenerData serviceListenerData = new ServiceListenerData();
+                            serviceListenerData.setFullObject(entry.getValue());
+                            serviceListenerData.setBeanName(entry.getKey());
+                            serviceListenerData.setListenerClass(entry.getValue().getClass());
+                            serviceListenerData.setOneEventListener(declaredAnnotation);
+                            if (serviceListeners.containsKey(declaredAnnotation.order())) {
+                                throw new Exception("Order [" + declaredAnnotation.order() + "] has been duplicated.");
+                            } else {
+                                serviceListeners.put(declaredAnnotation.order(), serviceListenerData);
+                            }
 
+                        }
+                    }
+
+
+                    serviceMap.forEach((s, o) -> {
+                        System.out.println("service = " + s);
                     });
+
+
+                    //send start event
+                    serviceListeners.forEach((s, o) -> {
+                        System.out.println("listener = " + s);
+                        Method[] methods = beansOfType.get(o.getBeanName()).getClass().getMethods();
+                        Optional<Method> onStart = Arrays.stream(methods).filter(method -> method.getName().equals("onStart")).findFirst();
+
+                        onStart.ifPresent(method -> {
+                            if (o.getOneEventListener().mode().equals(RunningMode.Async)) {
+                                Thread thread = new Thread(() -> {
+                                    try {
+                                        method.invoke(o.getFullObject(), aggregate, args);
+                                    } catch (IllegalAccessException e) {
+                                        e.printStackTrace();
+                                    } catch (InvocationTargetException e) {
+                                        e.printStackTrace();
+                                    }
+                                });
+                                thread.setName("one_event-" + aClass.getSimpleName() + "-on_start");
+                                thread.start();
+                            } else {
+                                try {
+                                    method.invoke(o.getFullObject(), aggregate, args);
+                                } catch (IllegalAccessException e) {
+                                    e.printStackTrace();
+                                } catch (InvocationTargetException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        });
+                    });
+
                     serviceMap.forEach((aDouble, serviceData) -> {
-                        System.out.println("serviceData = " + aDouble);
+//                        System.out.println("serviceData = " + aDouble);
                         Method[] methods = beansOfType.get(serviceData.getBeanName()).getClass().getMethods();
                         Optional<Method> process = Arrays.stream(methods).filter(method -> method.getName().equals("process")).findFirst();
                         process.ifPresent(method -> {
@@ -108,7 +169,7 @@ public class OneEventTemplateImpl<Aggregate> {
                             }
                         });
                     });
-                } finally {
+
                     AtomicInteger maxCount = new AtomicInteger();
                     prcessingServiceMap.forEach((aDouble, serviceData) -> {
                         StringBuilder tableRow = new StringBuilder();
@@ -134,7 +195,9 @@ public class OneEventTemplateImpl<Aggregate> {
                     at.setTextAlignment(TextAlignment.LEFT);
                     at.getContext().setGrid(U8_Grids.borderLight());
                     at.getRenderer().setCWC(new CWC_LongestWord());
-                    System.out.println(ANSI_GREEN + at.render());
+                    System.out.println(ANSI_CYAN + at.render() + ANSI_RESET);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
 
             }
