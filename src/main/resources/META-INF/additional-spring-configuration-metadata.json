@@ -7,6 +7,12 @@
       "sourceType": "com.mafei.oneeventsaga.config.OneEventProperties"
     },
     {
+      "name": "spring.oneevent.generate-ui",
+      "type": "java.lang.String",
+      "description": "generateUi",
+      "sourceType": "com.mafei.oneeventsaga.config.OneEventProperties"
+    },
+    {
       "name": "spring.oneevent.path",
       "type": "java.lang.String",
       "description": "Description for spring.one-event.componentScan",

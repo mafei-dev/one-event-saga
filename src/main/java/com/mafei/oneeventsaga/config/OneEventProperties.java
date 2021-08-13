@@ -5,12 +5,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "spring.oneevent")
 public class OneEventProperties {
 
-    private String [] componentScan;
+    private String[] componentScan;
     private String path;
     private boolean showStartUpSummary = true;
     private boolean showStartUpConfiguredSteps = true;
     private boolean showTransactionSummary = true;
-
+    private boolean generateUi = true;
 
 
     public String getPath() {
@@ -52,5 +52,13 @@ public class OneEventProperties {
 
     public void setComponentScan(String[] componentScan) {
         this.componentScan = componentScan;
+    }
+
+    public boolean isGenerateUi() {
+        return generateUi;
+    }
+
+    public void setGenerateUi(boolean generateUi) {
+        this.generateUi = generateUi;
     }
 }

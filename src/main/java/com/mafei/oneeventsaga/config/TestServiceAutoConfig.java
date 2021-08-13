@@ -52,23 +52,29 @@ public class TestServiceAutoConfig {
 
 
         ValidateResponse validate = validate();
-        if (!validate.pageList.isEmpty()) {
-            createFile();
-            validate.getProcess().forEach((name, doubleServiceDataTreeMap) -> {
-                try {
-                    generateHtml(doubleServiceDataTreeMap, name);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-            generatePages(validate.getPageList());
-        } else {
-            System.err.println("There was no one-event implementation.");
+
+        if (oneEventProperties.isGenerateUi()) {
+            if (!validate.pageList.isEmpty()) {
+                createFile();
+                validate.getProcess().forEach((name, doubleServiceDataTreeMap) -> {
+                    try {
+                        generateHtml(doubleServiceDataTreeMap, name);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+                generatePages(validate.getPageList());
+            } else {
+                System.err.println("There was no one-event implementation.");
+            }
+        }
+        if (oneEventProperties.isShowStartUpConfiguredSteps()) {
+            printConsoleTable(validate.getProcess());
         }
 
-
-        printConsoleTable(validate.getProcess());
-        printConsoleSummary(validate.getPageList());
+        if (oneEventProperties.isShowStartUpSummary()) {
+            printConsoleSummary(validate.getPageList());
+        }
 
 
     }
