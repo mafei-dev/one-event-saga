@@ -19,4 +19,6 @@ public @interface Start {
 
     String description();
 
+//    Class<?> with();
+
 }

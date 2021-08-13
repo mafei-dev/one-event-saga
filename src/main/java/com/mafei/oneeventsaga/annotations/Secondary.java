@@ -20,4 +20,7 @@ public @interface Secondary {
 
     String description() default "";
 
+//    Class<?> with();
+
+
 }

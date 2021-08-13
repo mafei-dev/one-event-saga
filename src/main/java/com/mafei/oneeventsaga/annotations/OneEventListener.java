@@ -17,4 +17,5 @@ public @interface OneEventListener {
     int order() default 1;
 
     RunningMode mode() default RunningMode.Async;
+//    Class<?> with();
 }

@@ -25,6 +25,9 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.mafei.oneeventsaga.utils.Resources.ANSI_CYAN;
+import static com.mafei.oneeventsaga.utils.Resources.ANSI_RESET;
+
 @Configuration
 public class OneEventTemplateImpl<Aggregate> {
 
@@ -56,14 +59,7 @@ public class OneEventTemplateImpl<Aggregate> {
                 });
             };
         }*/
-    public static final String ANSI_GREEN = "\u001B[32m";
-    public static final String ANSI_RESET = "\u001B[0m";
-    public static final String ANSI_BLACK = "\u001B[30m";
-    public static final String ANSI_YELLOW = "\u001B[33m";
-    public static final String ANSI_BLUE = "\u001B[34m";
-    public static final String ANSI_PURPLE = "\u001B[35m";
-    public static final String ANSI_CYAN = "\u001B[36m";
-    public static final String ANSI_WHITE = "\u001B[37m";
+
     Logger logger = LoggerFactory.getLogger(OneEventTemplateImpl.class);
     @Autowired
     ListableBeanFactory beanFactory;
