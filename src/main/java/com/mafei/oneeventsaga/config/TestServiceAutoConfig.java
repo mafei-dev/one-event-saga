@@ -6,7 +6,6 @@ import com.mafei.oneeventsaga.annotations.Secondary;
 import com.mafei.oneeventsaga.annotations.Start;
 import com.mafei.oneeventsaga.utils.ServiceData;
 import de.vandermeer.asciitable.AsciiTable;
-import de.vandermeer.asciitable.CWC_LongestWord;
 import de.vandermeer.asciithemes.u8.U8_Grids;
 import de.vandermeer.skb.interfaces.transformers.textformat.TextAlignment;
 import org.apache.commons.io.FileUtils;
@@ -30,8 +29,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.mafei.oneeventsaga.utils.Resources.ANSI_CYAN;
-import static com.mafei.oneeventsaga.utils.Resources.ANSI_RESET;
+import static com.mafei.oneeventsaga.utils.Resources.*;
 
 @Configuration
 @Component
@@ -81,7 +79,7 @@ public class TestServiceAutoConfig {
 
     private void printConsoleSummary(Set<Class<?>> pageList) {
         String title = "One-Event configured service summery.";
-        String baseClass = "Base Class";
+        String baseClass = "Base Interface";
         String processName = "Process Name";
         String description = "Description";
         String version = "Process Version";
@@ -90,11 +88,11 @@ public class TestServiceAutoConfig {
         at.addRule();
         at.addRow(null, null, null, null, title);
         at.addRule();
-        at.addRow(baseClass, processName, description, version, basePackage);
+        at.addRow(baseClass, version, processName, description, basePackage);
         at.addRule();
 
         AtomicInteger maxCount = new AtomicInteger();
-        if (title.length() > maxCount.get()) {
+        if (title.length() > maxCount.intValue()) {
             maxCount.set(title.length());
         }
         String classNames = (baseClass + processName + description + version + basePackage);
@@ -122,24 +120,26 @@ public class TestServiceAutoConfig {
             Primary1 rootAnnotation = aClass.getDeclaredAnnotation(Primary1.class);
             at.addRow(
                     aClass.getSimpleName(),
+                    rootAnnotation.version().equals("") ? "-" : rootAnnotation.version(),
                     rootAnnotation.name(),
                     rootAnnotation.description(),
-                    rootAnnotation.version().equals("") ? "-" : rootAnnotation.version(),
                     aClass.getPackage().getName()
             );
             at.addRule();
         });
         at.setTextAlignment(TextAlignment.LEFT);
         at.getContext().setGrid(U8_Grids.borderLight());
-        at.getRenderer().setCWC(new CWC_LongestWord());
-        System.out.println("maxCount = " + maxCount.get());
-        System.out.println(ANSI_CYAN + at.render(maxCount.get() + 10) + ANSI_RESET);
+//        at.getRenderer().setCWC(new CWC_LongestWord());
+        System.out.println(ANSI_YELLOW + at.render(maxCount.intValue() + 25) + ANSI_RESET);
     }
 
     private void printConsoleTable(Map<String, TreeMap<Double, ServiceData>> process) {
 
-
+        AtomicInteger pageNumber = new AtomicInteger(1);
         process.forEach((s, doubleServiceDataTreeMap) -> {
+
+
+
             AtomicInteger maxCount = new AtomicInteger();
             doubleServiceDataTreeMap.forEach((aDouble, serviceData) -> {
                 if ((serviceData.getName()).length() > maxCount.intValue()) {
@@ -166,10 +166,20 @@ public class TestServiceAutoConfig {
 
                 count.getAndIncrement();
             });
-            at.addRule();
+            if (doubleServiceDataTreeMap.isEmpty()) {
+                String msg = "There is no any allocated service.";
+                at.addRow(msg);
+                if (msg.length() > maxCount.intValue()) {
+                    maxCount.set(msg.length());
+                }
+                at.addRule();
+            } else {
+                at.addRule();
+            }
             at.setTextAlignment(TextAlignment.CENTER);
-            at.getContext().setGrid(U8_Grids.borderDoubleLight());
-            System.out.println(ANSI_CYAN + at.render(maxCount.intValue() + 10) + ANSI_RESET);
+//            at.getContext().setGrid(U8_Grids.borderDoubleLight());
+            System.out.println(ANSI_CYAN + "[" + pageNumber.getAndIncrement() + "]");
+            System.out.println(at.render(maxCount.intValue() + 10) + ANSI_RESET);
         });
     }
 
