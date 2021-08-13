@@ -68,12 +68,13 @@ public class OneEventTemplateImpl<Aggregate> {
     public OneEventTemplate<Aggregate> oneEventTemplate(ApplicationContext context) {
         return new OneEventTemplate<Aggregate>() {
             @Override
-            public void process(Class<?> aClass, Aggregate aggregate, Object... args) {
-
+            public OneEventResponse process(Class<?> aClass, Aggregate aggregate, Object... args) {
+                OneEventResponse response = new OneEventResponse();
+                TreeMap<Double, ServiceData> completedService = new TreeMap<>();
 
                 Map<String, ?> beansOfType = beanFactory.getBeansOfType(aClass);
-                TreeMap<Double, ServiceData> serviceMap = new TreeMap<>();
-                TreeMap<Double, ServiceData> prcessingServiceMap = serviceMap;
+                TreeMap<Double, IServiceData> serviceMap = new TreeMap<>();
+                TreeMap<Double, IServiceData> prcessingServiceMap = serviceMap;
                 TreeMap<Integer, ServiceListenerData> serviceListeners = new TreeMap<>();
 
 
@@ -81,23 +82,23 @@ public class OneEventTemplateImpl<Aggregate> {
                     for (Map.Entry<String, ?> entry : beansOfType.entrySet()) {
 
                         if (entry.getValue().getClass().isAnnotationPresent(Start.class)) {
-                            ServiceData startServiceData = new ServiceData();
-                            startServiceData.setBeanName(entry.getKey());
-                            startServiceData.setServiceType(ServiceTypes.START_SERVICE);
-                            startServiceData.setServiceClass(entry.getValue().getClass());
-                            startServiceData.setStart(entry.getValue().getClass().getDeclaredAnnotation(Start.class));
-                            startServiceData.setFullObject(entry.getValue());
+                            IServiceData startIServiceData = new IServiceData();
+                            startIServiceData.setBeanName(entry.getKey());
+                            startIServiceData.setServiceType(ServiceTypes.START_SERVICE);
+                            startIServiceData.setServiceClass(entry.getValue().getClass());
+                            startIServiceData.setStart(entry.getValue().getClass().getDeclaredAnnotation(Start.class));
+                            startIServiceData.setFullObject(entry.getValue());
                             // TODO: 8/13/2021 check and throw the exception if duplicated
-                            serviceMap.putIfAbsent(1.0, startServiceData);
+                            serviceMap.putIfAbsent(1.0, startIServiceData);
                         } else if (entry.getValue().getClass().isAnnotationPresent(Secondary.class)) {
-                            ServiceData secondaryServiceData = new ServiceData();
-                            secondaryServiceData.setBeanName(entry.getKey());
-                            secondaryServiceData.setServiceType(ServiceTypes.SECONDER_SERVICE);
-                            secondaryServiceData.setServiceClass(entry.getValue().getClass());
-                            secondaryServiceData.setSecondary(entry.getValue().getClass().getDeclaredAnnotation(Secondary.class));
-                            secondaryServiceData.setFullObject(entry.getValue());
+                            IServiceData secondaryIServiceData = new IServiceData();
+                            secondaryIServiceData.setBeanName(entry.getKey());
+                            secondaryIServiceData.setServiceType(ServiceTypes.SECONDER_SERVICE);
+                            secondaryIServiceData.setServiceClass(entry.getValue().getClass());
+                            secondaryIServiceData.setSecondary(entry.getValue().getClass().getDeclaredAnnotation(Secondary.class));
+                            secondaryIServiceData.setFullObject(entry.getValue());
                             // TODO: 8/13/2021 check and throw the exception if duplicated
-                            serviceMap.putIfAbsent(secondaryServiceData.getSecondary().step(), secondaryServiceData);
+                            serviceMap.putIfAbsent(secondaryIServiceData.getSecondary().step(), secondaryIServiceData);
                         } else if (entry.getValue().getClass().isAnnotationPresent(OneEventListener.class)) {
                             OneEventListener declaredAnnotation = entry.getValue().getClass().getDeclaredAnnotation(OneEventListener.class);
                             ServiceListenerData serviceListenerData = new ServiceListenerData();
@@ -131,6 +132,7 @@ public class OneEventTemplateImpl<Aggregate> {
                                 Thread thread = new Thread(() -> {
                                     try {
                                         method.invoke(o.getFullObject(), aggregate, args);
+
                                     } catch (IllegalAccessException e) {
                                         e.printStackTrace();
                                     } catch (InvocationTargetException e) {
@@ -151,15 +153,37 @@ public class OneEventTemplateImpl<Aggregate> {
                         });
                     });
 
-                    serviceMap.forEach((aDouble, serviceData) -> {
+                    serviceMap.forEach((aDouble, IServiceData) -> {
 //                        System.out.println("serviceData = " + aDouble);
-                        Method[] methods = beansOfType.get(serviceData.getBeanName()).getClass().getMethods();
+                        Method[] methods = beansOfType.get(IServiceData.getBeanName()).getClass().getMethods();
                         Optional<Method> process = Arrays.stream(methods).filter(method -> method.getName().equals("process")).findFirst();
                         process.ifPresent(method -> {
                             try {
-                                Object invoke = method.invoke(serviceData.getFullObject(), aggregate, args);
+                                Object invoke = method.invoke(IServiceData.getFullObject(), aggregate, args);
+                                IServiceData.setProcessStatus(ProcessStatus.PASSED);
+                                prcessingServiceMap.replace(aDouble, IServiceData);
+                                ServiceData serviceData = new ServiceData();
+                                serviceData.setArgs(args);
+                                serviceData.setBeanName(IServiceData.getBeanName());
                                 serviceData.setProcessStatus(ProcessStatus.PASSED);
-                                prcessingServiceMap.replace(aDouble, serviceData);
+                                serviceData.setServiceClass(IServiceData.getServiceClass());
+                                if (IServiceData.getServiceType().equals(ServiceTypes.START_SERVICE)) {
+
+                                    ServiceMetaData metadata = new ServiceMetaData();
+                                    metadata.setStep(aDouble);
+                                    metadata.setDescription(IServiceData.getStart().description());
+                                    metadata.setVersion(IServiceData.getStart().version());
+                                    metadata.setServiceType(ServiceTypes.START_SERVICE);
+                                    serviceData.setMetadata(metadata);
+                                } else if (IServiceData.getServiceType().equals(ServiceTypes.SECONDER_SERVICE)) {
+                                    ServiceMetaData metadata = new ServiceMetaData();
+                                    metadata.setStep(aDouble);
+                                    metadata.setDescription(IServiceData.getSecondary().description());
+                                    metadata.setVersion(IServiceData.getSecondary().version());
+                                    metadata.setServiceType(ServiceTypes.SECONDER_SERVICE);
+                                    serviceData.setMetadata(metadata);
+                                }
+                                completedService.put(aDouble, serviceData);
                             } catch (IllegalAccessException | InvocationTargetException e) {
                                 e.printStackTrace();
                             }
@@ -167,12 +191,12 @@ public class OneEventTemplateImpl<Aggregate> {
                     });
 
                     AtomicInteger maxCount = new AtomicInteger();
-                    prcessingServiceMap.forEach((aDouble, serviceData) -> {
+                    prcessingServiceMap.forEach((aDouble, IServiceData) -> {
                         StringBuilder tableRow = new StringBuilder();
                         tableRow.append(aDouble);
-                        tableRow.append(serviceData.getBeanName());
-                        tableRow.append(serviceData.getBeanName());
-                        tableRow.append(serviceData.getProcessStatus());
+                        tableRow.append(IServiceData.getBeanName());
+                        tableRow.append(IServiceData.getBeanName());
+                        tableRow.append(IServiceData.getProcessStatus());
                         if (tableRow.toString().length() > maxCount.intValue()) {
                             maxCount.set(tableRow.toString().length());
                         }
@@ -184,8 +208,8 @@ public class OneEventTemplateImpl<Aggregate> {
                     at.addRule();
                     at.addRow("Step", "Service", "Status");
                     at.addRule();
-                    prcessingServiceMap.forEach((aDouble, serviceData) -> {
-                        at.addRow(Double.toString(aDouble), serviceData.getBeanName(), serviceData.getProcessStatus());
+                    prcessingServiceMap.forEach((aDouble, IServiceData) -> {
+                        at.addRow(Double.toString(aDouble), IServiceData.getBeanName(), IServiceData.getProcessStatus());
                         at.addRule();
                     });
                     at.setTextAlignment(TextAlignment.LEFT);
@@ -195,7 +219,8 @@ public class OneEventTemplateImpl<Aggregate> {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-
+                response.setCompletedService(completedService);
+                return response;
             }
         };
     }

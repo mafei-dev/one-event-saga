@@ -3,7 +3,7 @@ package com.mafei.oneeventsaga.process;
 import com.mafei.oneeventsaga.annotations.Secondary;
 import com.mafei.oneeventsaga.annotations.Start;
 
-public class ServiceData {
+public class IServiceData {
     private Class<?> serviceClass;
     private ServiceTypes serviceType;
     private ProcessStatus processStatus = ProcessStatus.NOT_YET;
